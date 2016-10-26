@@ -5,6 +5,7 @@ import com.sun.javaws.exceptions.InvalidArgumentException;
 import org.apache.commons.math3.complex.Complex;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -51,20 +52,17 @@ public class Solver {
     }
 
     /**
-     * This method finds root for function {@code f} for points in rectangle {@code [-a, a]x[-b, b]}.
-     * Each parameter must be positive number.
-     * @param a parameter for axis Ox
-     * @param b parameter for axis Oy
+     * This method finds root for function {@code f} for points in rectangle {@code [a.real, b.real]x[a.imaginary, b.imaginary]}.
+     * Parameter {@code a} must be less or equal to parameter {@code b}.
+     *
+     * @param a the most left and down point of the rectangle
+     * @param b the most right and up point of the rectangle
      * @return list of colored points
      */
-    public ArrayList<ColoredPoint> solve(double a, double b) throws InvalidArgumentException {
-        if (Double.compare(a, 0.0) <= 0 || Double.compare(b, 0.0) <= 0) {
-            throw new InvalidArgumentException(new String[]{"Non-positive arguments"});
-        }
-
+    public List<ColoredPoint> solve(Complex a, Complex b) throws InvalidArgumentException {
         ArrayList<ColoredPoint> points = new ArrayList<>();
-        for (double x = -a; Double.compare(x, a) <= 0; x += step) {
-            for (double y = -b; Double.compare(y, b) <= 0; y +=step) {
+        for (double x = a.getReal(); x <= b.getReal(); x += step) {
+            for (double y = a.getImaginary(); y <= b.getImaginary(); y +=step) {
                 final Complex point = new Complex(x, y);
                 executor.submit(() -> {
                     Complex temp = newtonSolver.apply(point);
