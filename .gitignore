@@ -18,3 +18,4 @@ hs_err_pid*
 .gradle
 build
 out
+gradle/wrapper/gradle-wrapper.properties
