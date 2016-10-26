@@ -1,5 +1,6 @@
 package fractal;
 
+import com.sun.javaws.exceptions.InvalidArgumentException;
 import de.erichseifert.gral.data.DataTable;
 import de.erichseifert.gral.plots.XYPlot;
 import de.erichseifert.gral.plots.lines.DefaultLineRenderer2D;
@@ -12,6 +13,8 @@ import org.apache.commons.math3.complex.Complex;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.geom.Ellipse2D;
+import java.util.*;
+import java.util.List;
 
 /**
  * Main frame for fractal task
@@ -46,8 +49,10 @@ public class MainFrame extends JFrame {
         }
     }
 
-    private void drawPoint(Complex point, int pointColor) {
-        switch (pointColor) {
+    private void drawPoint(Solver.ColoredPoint coloredPoint) {
+        Complex point = coloredPoint.getPoint();
+
+        switch (coloredPoint.getColor()) {
             case 0:
                 firstRootData.add(point.getReal(), point.getImaginary());
                 for (PointRenderer pR : plot.getPointRenderers(firstRootData)) {
@@ -91,9 +96,16 @@ public class MainFrame extends JFrame {
     public static void main(String[] args) {
         MainFrame mainFrame = new MainFrame();
         mainFrame.setTitle("Fractals");
-        mainFrame.drawPoint(new Complex(0.0f, 0.0f), 0);
-        mainFrame.drawPoint(new Complex(0.5f, 0.5f), 1);
-        mainFrame.drawPoint(new Complex(1.5f, 1.5f), 2);
+        Solver solver = new Solver();
+        try {
+            List<Solver.ColoredPoint> answer = solver.solve(new Complex(-2.0f, -2.0f), new Complex(2.0f, 2.0f));
+            for (Solver.ColoredPoint point : answer) {
+                mainFrame.drawPoint(point);
+            }
+        } catch (InvalidArgumentException e) {
+            System.out.println("Очень жаль " + e.getRealMessage());
+        }
+
         mainFrame.setVisible(true);
     }
 }
