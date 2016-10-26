@@ -5,6 +5,7 @@ import de.erichseifert.gral.data.DataTable;
 import de.erichseifert.gral.plots.XYPlot;
 import de.erichseifert.gral.plots.lines.DefaultLineRenderer2D;
 import de.erichseifert.gral.plots.lines.LineRenderer;
+import de.erichseifert.gral.plots.points.PointData;
 import de.erichseifert.gral.plots.points.PointRenderer;
 import de.erichseifert.gral.ui.InteractivePanel;
 
@@ -22,13 +23,9 @@ import java.util.List;
  * @author Danil Kolikov
  */
 public class MainFrame extends JFrame {
-    private static final Color red = new Color(1.0f, 0.0f, 0.0f);
-    private static final Color green = new Color(0.0f, 1.0f, 0.0f);
-    private static final Color blue = new Color(0.0f, 0.0f, 1.0f);
+    private static final Shape circle = new Ellipse2D.Double(-4.0, -4.0, 8.0, 8.0);
 
-    private DataTable firstRootData = new DataTable(Double.class, Double.class);
-    private DataTable secondRootData = new DataTable(Double.class, Double.class);
-    private DataTable thirdRootData = new DataTable(Double.class, Double.class);
+    List<DataTable> pointsData = new ArrayList<>(4);
     private XYPlot plot = new XYPlot();
     private InteractivePanel interactivePanel;
 
@@ -51,32 +48,26 @@ public class MainFrame extends JFrame {
 
     private void drawPoint(Solver.ColoredPoint coloredPoint) {
         Complex point = coloredPoint.getPoint();
+        int color = coloredPoint.getColor();
+        if (color < 3) {
+            pointsData.get(color).add(point.getReal(), point.getImaginary());
+            for (PointRenderer pR : plot.getPointRenderers(pointsData.get(color))) {
+                pR.setShape(circle);
+                switch (color) {
+                    case 0:
+                        pR.setColor(Color.RED);
+                        break;
+                    case 1:
+                        pR.setColor(Color.GREEN);
+                        break;
+                    case 2:
+                        pR.setColor(Color.BLUE);
+                        break;
+                }
 
-        switch (coloredPoint.getColor()) {
-            case 0:
-                firstRootData.add(point.getReal(), point.getImaginary());
-                for (PointRenderer pR : plot.getPointRenderers(firstRootData)) {
-                    Shape circle = new Ellipse2D.Double(-4.0, -4.0, 8.0, 8.0);
-                    pR.setShape(circle);
-                    pR.setColor(red);
-                }
-                break;
-            case 1:
-                secondRootData.add(point.getReal(), point.getImaginary());
-                for (PointRenderer pR : plot.getPointRenderers(secondRootData)) {
-                    Shape circle = new Ellipse2D.Double(-4.0, -4.0, 8.0, 8.0);
-                    pR.setShape(circle);
-                    pR.setColor(green);
-                }
-                break;
-            case 2:
-                thirdRootData.add(point.getReal(), point.getImaginary());
-                for (PointRenderer pR : plot.getPointRenderers(thirdRootData)) {
-                    Shape circle = new Ellipse2D.Double(-4.0, -4.0, 8.0, 8.0);
-                    pR.setShape(circle);
-                    pR.setColor(blue);
-                }
-                break;
+            }
+        } else {
+            // TODO: точка расходимости
         }
     }
 
@@ -85,9 +76,10 @@ public class MainFrame extends JFrame {
         setMinimumSize(new Dimension(600, 600));
 
         drawCircle();
-        plot.add(firstRootData);
-        plot.add(secondRootData);
-        plot.add(thirdRootData);
+        for (int i = 0; i < 4; i++) {
+            pointsData.add(new DataTable(Double.class, Double.class));
+            plot.add(pointsData.get(i));
+        }
 
         interactivePanel = new InteractivePanel(plot);
         getContentPane().add(interactivePanel);
