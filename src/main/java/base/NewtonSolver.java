@@ -14,9 +14,9 @@ public class NewtonSolver implements Function<Complex, Complex> {
 
     private double accuracy = 1e-4;
 
-    public NewtonSolver(Function<Complex, Complex> _f, Function<Complex, Complex> _df_dz) {
-        f = _f;
-        df_dz = _df_dz;
+    public NewtonSolver(Function<Complex, Complex> f, Function<Complex, Complex> df_dz) {
+        this.f = f;
+        this.df_dz = df_dz;
     }
 
     public void setAccuracy(double accuracy) {
