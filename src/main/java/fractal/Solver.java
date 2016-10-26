@@ -5,6 +5,7 @@ import com.sun.javaws.exceptions.InvalidArgumentException;
 import org.apache.commons.math3.complex.Complex;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
@@ -67,7 +68,11 @@ public class Solver {
                 executor.submit(() -> {
                     Complex temp = newtonSolver.apply(point);
                     synchronized (points) {
-                        points.add(new ColoredPoint(point, findClosestRoot(temp)));
+                        if (temp != null) {
+                            points.add(new ColoredPoint(point, findClosestRoot(temp)));
+                        } else {
+                            points.add(new ColoredPoint(point, 4));
+                        }
                     }
                 });
             }
@@ -81,6 +86,10 @@ public class Solver {
             }
         }
         return points;
+    }
+
+    public List<Complex> solvePath(Complex p) {
+        return newtonSolver.getPath(p);
     }
 
     class ColoredPoint {
