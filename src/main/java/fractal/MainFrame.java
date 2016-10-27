@@ -3,9 +3,9 @@ package fractal;
 import com.sun.javaws.exceptions.InvalidArgumentException;
 import de.erichseifert.gral.data.DataTable;
 import de.erichseifert.gral.plots.XYPlot;
+import de.erichseifert.gral.plots.axes.Axis;
 import de.erichseifert.gral.plots.lines.DefaultLineRenderer2D;
 import de.erichseifert.gral.plots.lines.LineRenderer;
-import de.erichseifert.gral.plots.points.PointData;
 import de.erichseifert.gral.plots.points.PointRenderer;
 import de.erichseifert.gral.ui.InteractivePanel;
 
@@ -13,6 +13,8 @@ import org.apache.commons.math3.complex.Complex;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.geom.Ellipse2D;
 import java.util.*;
 import java.util.List;
@@ -23,13 +25,14 @@ import java.util.List;
  * @author Danil Kolikov
  */
 public class MainFrame extends JFrame {
-    private static final Shape circle = new Ellipse2D.Double(-4.0, -4.0, 8.0, 8.0);
+    private static final Shape circle = new Ellipse2D.Double(-2.0, -2.0, 4.0, 4.0);
 
-    List<DataTable> pointsData = new ArrayList<>(4);
+    private List<DataTable> pointsData = new ArrayList<>(4);
+    private DataTable pathData = new DataTable(Double.class, Double.class);
     private XYPlot plot = new XYPlot();
-    private InteractivePanel interactivePanel;
+    private LineRenderer lineRenderer = new DefaultLineRenderer2D();
 
-    LineRenderer lineRenderer = new DefaultLineRenderer2D();
+    private Solver solver = new Solver();
 
     private void drawCircle() {
         DataTable circleData = new DataTable(Double.class, Double.class);
@@ -41,7 +44,7 @@ public class MainFrame extends JFrame {
         plot.add(circleData);
         plot.setLineRenderers(circleData, lineRenderer);
         for (PointRenderer pR : plot.getPointRenderers(circleData)) {
-            Shape circle = new Ellipse2D.Double(-4.0, -4.0, 8.0, 8.0);
+            Shape circle = new Ellipse2D.Double(-1.0, -1.0, 2.0, 2.0);
             pR.setShape(circle);
         }
     }
@@ -71,32 +74,63 @@ public class MainFrame extends JFrame {
         }
     }
 
-    public MainFrame() throws HeadlessException {
-        setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-        setMinimumSize(new Dimension(600, 600));
+    private void drawPath(Complex startPoint) {
+        // clean previous path
+        plot.remove(pathData);
+        pathData.clear();
 
-        drawCircle();
+        // count new data
+        for (Complex point : solver.solvePath(startPoint)) {
+            pathData.add(point.getReal(), point.getImaginary());
+        }
+
+        // add new path to plot
+        plot.add(pathData);
+        plot.setLineRenderers(pathData, lineRenderer);
+    }
+
+    private MainFrame() throws HeadlessException {
+        setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        setMinimumSize(new Dimension(700, 700));
+
         for (int i = 0; i < 4; i++) {
             pointsData.add(new DataTable(Double.class, Double.class));
             plot.add(pointsData.get(i));
         }
 
-        interactivePanel = new InteractivePanel(plot);
+        InteractivePanel interactivePanel = new InteractivePanel(plot);
+        interactivePanel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                super.mouseClicked(e);
+                Axis axisX = plot.getAxis(XYPlot.AXIS_X);
+                Axis axisY = plot.getAxis(XYPlot.AXIS_Y);
+                Number numberX = plot.getAxisRenderer(XYPlot.AXIS_X).viewToWorld(axisX, e.getX(), true);
+                Number numberY = plot.getAxisRenderer(XYPlot.AXIS_Y).viewToWorld(axisY, e.getY(), true);
+                double X = numberX.doubleValue();
+                double Y = -numberY.doubleValue();
+                drawPath(new Complex(X, Y));
+                getContentPane().repaint();
+            }
+
+        });
         getContentPane().add(interactivePanel);
     }
 
     public static void main(String[] args) {
         MainFrame mainFrame = new MainFrame();
         mainFrame.setTitle("Fractals");
-        Solver solver = new Solver();
+
+        double squareSide = 5.0f;
         try {
-            List<Solver.ColoredPoint> answer = solver.solve(new Complex(-2.0f, -2.0f), new Complex(2.0f, 2.0f));
+            List<Solver.ColoredPoint> answer = mainFrame.solver.solve(new Complex(-squareSide, -squareSide), new Complex(squareSide, squareSide));
             for (Solver.ColoredPoint point : answer) {
                 mainFrame.drawPoint(point);
             }
         } catch (InvalidArgumentException e) {
             System.out.println("Очень жаль " + e.getRealMessage());
         }
+        mainFrame.drawCircle();
 
         mainFrame.setVisible(true);
     }

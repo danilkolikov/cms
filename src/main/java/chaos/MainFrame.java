@@ -2,12 +2,15 @@ package chaos;
 
 import de.erichseifert.gral.data.DataTable;
 import de.erichseifert.gral.plots.XYPlot;
+import de.erichseifert.gral.plots.axes.Axis;
 import de.erichseifert.gral.plots.lines.LineRenderer;
 import de.erichseifert.gral.plots.points.PointRenderer;
 import de.erichseifert.gral.ui.InteractivePanel;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.List;
 
 /**
@@ -23,7 +26,7 @@ public class MainFrame extends JFrame {
         DataTable data = new DataTable(Double.class, Double.class);
         XYPlot plot = new XYPlot();
 
-        double eps = 0.001;
+        final double eps = 0.001;
         int maxIterations = 1_000;
         for (double r = 0.0; r < 5; r += 0.01) {
             List<Double> roots = Solver.findRoots(r, eps, maxIterations);
@@ -44,6 +47,18 @@ public class MainFrame extends JFrame {
         }
 
         InteractivePanel interactivePanel = new InteractivePanel(plot);
+        interactivePanel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                super.mouseClicked(e);
+                Axis axisX = plot.getAxis(XYPlot.AXIS_X);
+                Number numberX = plot.getAxisRenderer(XYPlot.AXIS_X).viewToWorld(axisX, e.getX(), true);
+                double X = numberX.doubleValue();
+                System.out.println(X);
+                List<Double> result = Solver.findConvergeSeries(X, eps, maxIterations);
+                // TODO: show points from result list
+            }
+        });
         getContentPane().add(interactivePanel);
     }
 
