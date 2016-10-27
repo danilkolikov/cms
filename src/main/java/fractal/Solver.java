@@ -4,13 +4,12 @@ import base.NewtonSolver;
 import com.sun.javaws.exceptions.InvalidArgumentException;
 import org.apache.commons.math3.complex.Complex;
 
+import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.TreeMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.function.Function;
 
 /**
@@ -34,7 +33,7 @@ public class Solver {
             new Complex(Math.cos(2 * Math.PI / 3), Math.sin(2 * Math.PI / 3)),
             new Complex(Math.cos(4 * Math.PI / 3), Math.sin(4 * Math.PI / 3))};
 
-    private static final double step = 0.0001;
+    private static final double step = 0.1;
 
     private ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
     private NewtonSolver newtonSolver = new NewtonSolver(f, df_dz);
@@ -61,33 +60,43 @@ public class Solver {
      * @return list of colored points
      */
     public List<ColoredPoint> solve(Complex a, Complex b) throws InvalidArgumentException {
+        //TODO: step must depend on {a, b} and check validity of arguments
         ArrayList<ColoredPoint> points = new ArrayList<>();
+        ArrayList<Future> futures = new ArrayList<>();
         for (double x = a.getReal(); x <= b.getReal(); x += step) {
             for (double y = a.getImaginary(); y <= b.getImaginary(); y +=step) {
                 final Complex point = new Complex(x, y);
-                executor.submit(() -> {
+                futures.add(executor.submit(() -> {
                     Complex temp = newtonSolver.apply(point);
                     synchronized (points) {
                         if (temp != null) {
                             points.add(new ColoredPoint(point, findClosestRoot(temp)));
                         } else {
-                            points.add(new ColoredPoint(point, 4));
+                            points.add(new ColoredPoint(point, 3));
                         }
                     }
-                });
+                }));
             }
         }
 
-        while (!executor.isTerminated()) {
+        //TODO: may be there is a better solution?
+        for (Future future : futures) {
             try {
-                executor.awaitTermination(100, TimeUnit.NANOSECONDS);
-            } catch (InterruptedException e) {
+                future.get();
+            } catch (InterruptedException | ExecutionException e) {
                 e.printStackTrace();
             }
         }
         return points;
     }
 
+    /**
+     * Returns path, which is created in {@link NewtonSolver::getPath}.
+     *
+     * @param p start point
+     * @return list of points in the path
+     */
+    @Nonnull
     public List<Complex> solvePath(Complex p) {
         return newtonSolver.getPath(p);
     }
