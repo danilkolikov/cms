@@ -3,6 +3,7 @@ package base;
 import com.sun.istack.internal.Nullable;
 import org.apache.commons.math3.complex.Complex;
 
+import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
@@ -27,6 +28,12 @@ public class NewtonSolver implements Function<Complex, Complex> {
         this.accuracy = accuracy;
     }
 
+    /**
+     * Finds root for function {@code f}, using Newton method.
+     *
+     * @param complex start point
+     * @return root point
+     */
     @Override
     @Nullable
     public Complex apply(Complex complex) {
@@ -46,6 +53,13 @@ public class NewtonSolver implements Function<Complex, Complex> {
         }
     }
 
+    /**
+     * Returns points from Newton method's iterations.
+     *
+     * @param complex start point
+     * @return list of points
+     */
+    @Nonnull
     public List<Complex> getPath(Complex complex) {
         Complex previous = complex;
         int iteration = 0;

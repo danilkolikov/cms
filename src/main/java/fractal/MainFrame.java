@@ -49,25 +49,25 @@ public class MainFrame extends JFrame {
     private void drawPoint(Solver.ColoredPoint coloredPoint) {
         Complex point = coloredPoint.getPoint();
         int color = coloredPoint.getColor();
-        if (color < 3) {
-            pointsData.get(color).add(point.getReal(), point.getImaginary());
-            for (PointRenderer pR : plot.getPointRenderers(pointsData.get(color))) {
-                pR.setShape(circle);
-                switch (color) {
-                    case 0:
-                        pR.setColor(Color.RED);
-                        break;
-                    case 1:
-                        pR.setColor(Color.GREEN);
-                        break;
-                    case 2:
-                        pR.setColor(Color.BLUE);
-                        break;
-                }
-
+        pointsData.get(color).add(point.getReal(), point.getImaginary());
+        for (PointRenderer pR : plot.getPointRenderers(pointsData.get(color))) {
+            pR.setShape(circle);
+            switch (color) {
+                case 0:
+                    pR.setColor(Color.RED);
+                    break;
+                case 1:
+                    pR.setColor(Color.GREEN);
+                    break;
+                case 2:
+                    pR.setColor(Color.BLUE);
+                    break;
+                case 3:
+                    //TODO: Black is never printed! May be we should increase number of iterations?
+                    pR.setColor(Color.BLACK);
+                    break;
             }
-        } else {
-            // TODO: точка расходимости
+
         }
     }
 
