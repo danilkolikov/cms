@@ -33,15 +33,10 @@ public class Solver {
             new Complex(Math.cos(2 * Math.PI / 3), Math.sin(2 * Math.PI / 3)),
             new Complex(Math.cos(4 * Math.PI / 3), Math.sin(4 * Math.PI / 3))};
 
-    private static final double step = 0.1;
+    private static final int pointsPerAxis = 100;
 
     private ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
     private NewtonSolver newtonSolver = new NewtonSolver(f, df_dz);
-
-
-    public Solver() {
-        newtonSolver.setAccuracy(step / 2);
-    }
 
     private int findClosestRoot(Complex point) {
         TreeMap<Double, Integer> map = new TreeMap<>();
@@ -60,26 +55,35 @@ public class Solver {
      * @return list of colored points
      */
     public List<ColoredPoint> solve(Complex a, Complex b) throws InvalidArgumentException {
-        //TODO: step must depend on {a, b} and check validity of arguments
-        ArrayList<ColoredPoint> points = new ArrayList<>();
-        ArrayList<Future> futures = new ArrayList<>();
-        for (double x = a.getReal(); x <= b.getReal(); x += step) {
-            for (double y = a.getImaginary(); y <= b.getImaginary(); y +=step) {
-                final Complex point = new Complex(x, y);
-                futures.add(executor.submit(() -> {
-                    Complex temp = newtonSolver.apply(point);
-                    synchronized (points) {
-                        if (temp != null) {
-                            points.add(new ColoredPoint(point, findClosestRoot(temp)));
-                        } else {
-                            points.add(new ColoredPoint(point, 3));
-                        }
-                    }
-                }));
-            }
+        if (a.getReal() > b.getReal() || (a.getReal() == b.getReal() && a.getImaginary() > b.getImaginary())) {
+            throw new InvalidArgumentException(new String[]{"Input points are not in lexicographical order"});
         }
 
-        //TODO: may be there is a better solution?
+        double stepX = Math.abs(a.getReal() - b.getReal()) / pointsPerAxis;
+        double stepY = Math.abs(a.getImaginary() - b.getImaginary()) / pointsPerAxis;
+        newtonSolver.setAccuracy(Math.min(stepX, stepY) / 2);
+        ArrayList<ColoredPoint> points = new ArrayList<>();
+        ArrayList<Future> futures = new ArrayList<>();
+        for (double x = a.getReal(); x <= b.getReal(); x += stepX) {
+            double finalX = x;
+            futures.add(executor.submit(() -> {
+                ArrayList<ColoredPoint> result = new ArrayList<ColoredPoint>();
+                for (double y = a.getImaginary(); y <= b.getImaginary(); y += stepY) {
+                    final Complex point = new Complex(finalX, y);
+                    Complex temp = newtonSolver.apply(point);
+                        if (temp != null) {
+                            result.add(new ColoredPoint(point, findClosestRoot(temp)));
+                        } else {
+                            result.add(new ColoredPoint(point, 3));
+                        }
+
+                }
+                synchronized (points) {
+                    points.addAll(result);
+                }
+            }));
+        }
+
         for (Future future : futures) {
             try {
                 future.get();
