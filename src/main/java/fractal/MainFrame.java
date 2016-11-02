@@ -2,6 +2,8 @@ package fractal;
 
 import com.sun.javaws.exceptions.InvalidArgumentException;
 import de.erichseifert.gral.data.DataTable;
+import de.erichseifert.gral.navigation.NavigationEvent;
+import de.erichseifert.gral.navigation.NavigationListener;
 import de.erichseifert.gral.plots.XYPlot;
 import de.erichseifert.gral.plots.axes.Axis;
 import de.erichseifert.gral.plots.lines.DefaultLineRenderer2D;
@@ -9,6 +11,7 @@ import de.erichseifert.gral.plots.lines.LineRenderer;
 import de.erichseifert.gral.plots.points.PointRenderer;
 import de.erichseifert.gral.ui.InteractivePanel;
 
+import de.erichseifert.gral.util.PointND;
 import org.apache.commons.math3.complex.Complex;
 
 import javax.swing.*;
@@ -97,6 +100,40 @@ public class MainFrame extends JFrame {
             pointsData.add(new DataTable(Double.class, Double.class));
             plot.add(pointsData.get(i));
         }
+
+        plot.getNavigator().addNavigationListener(new NavigationListener() {
+            @Override
+            public void centerChanged(NavigationEvent<PointND<? extends Number>> navigationEvent) {
+
+            }
+
+            @Override
+            public void zoomChanged(NavigationEvent<Double> navigationEvent) {
+                for (int i = 0; i < 4; i++) {
+                    plot.remove(pointsData.get(i));
+                    pointsData.get(i).clear();
+                }
+                plot.clear();
+                Axis axisX = plot.getAxis(XYPlot.AXIS_X);
+                Axis axisY = plot.getAxis(XYPlot.AXIS_Y);
+                Complex leftBottomPoint = new Complex(axisX.getMin().doubleValue(), axisY.getMin().doubleValue());
+                Complex rightTopPoint = new Complex(axisX.getMax().doubleValue(), axisY.getMax().doubleValue());
+                // TODO: calculate new coordinates
+                try {
+                    List<Solver.ColoredPoint> newData = solver.solve(leftBottomPoint, rightTopPoint);
+                    for (Solver.ColoredPoint point : newData) {
+                        drawPoint(point);
+                    }
+                    // TODO: points don't have color
+                } catch (InvalidArgumentException e) {
+                    e.printStackTrace();
+                }
+                for (int i = 0; i < 4; i++) {
+                    plot.add(pointsData.get(i));
+                }
+                System.out.println("Changed zoom: " + navigationEvent.getValueNew());
+            }
+        });
 
         InteractivePanel interactivePanel = new InteractivePanel(plot);
         interactivePanel.addMouseListener(new MouseAdapter() {
