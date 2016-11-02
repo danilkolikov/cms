@@ -16,6 +16,7 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 /**
  * Main frame for chaos task
@@ -25,9 +26,10 @@ import java.util.List;
 public class MainFrame extends JFrame {
     private static final double EPS = 1e-8;
     private static final int MAX_ITERATIONS = 10_000;
-    private static final int POINTS_COUNT = 200;
+    private static final int POINTS_COUNT = 1000;
 
     private final Solver.AsyncSolver solver;
+    private final XYPlot plot;
 
     public MainFrame() throws HeadlessException {
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
@@ -36,7 +38,7 @@ public class MainFrame extends JFrame {
         solver = new Solver.AsyncSolver();
 
         DataTable data = new DataTable(Double.class, Double.class);
-        XYPlot plot = new XYPlot();
+        plot = new XYPlot();
 
         fillDataTable(data, -2, 4);
         plot.add(data);
@@ -50,6 +52,9 @@ public class MainFrame extends JFrame {
         for (LineRenderer lR : plot.getLineRenderers(data)) {
             lR.setColor(color);
         }
+
+        plot.getAxis("x").setAutoscaled(false);
+        plot.getAxis("y").setAutoscaled(false);
 
         InteractivePanel interactivePanel = new InteractivePanel(plot);
         interactivePanel.addMouseListener(new MouseAdapter() {
@@ -98,7 +103,6 @@ public class MainFrame extends JFrame {
             private void redrawPoints(double left, double right) {
                 System.out.println("View: " + left + " " + right);
 
-                data.clear();
                 fillDataTable(data, left, right);
             }
         });
@@ -107,16 +111,34 @@ public class MainFrame extends JFrame {
     }
 
     private void fillDataTable(DataTable data, double minX, double maxX) {
-        data.clear();
-        minX = Math.max(-2, minX);
-        maxX = Math.min(4, maxX);
-        List<Pair<Double, List<Double>>> points = solver.solve(minX, maxX, POINTS_COUNT, EPS, MAX_ITERATIONS);
-        for (Pair<Double, List<Double>> point : points) {
-            double r = point.getKey();
-            for (Double value : point.getValue()) {
-                data.add(r, value);
+        final double finalMinX = Math.max(-2, minX);
+        final double finalMaxX = Math.min(4, maxX);
+
+        SwingWorker<List<Pair<Double, List<Double>>>, Void> worker = new SwingWorker<List<Pair<Double, List<Double>>>, Void>() {
+            @Override
+            protected List<Pair<Double, List<Double>>>doInBackground() throws Exception {
+                return solver.solve(finalMinX, finalMaxX, POINTS_COUNT, EPS, MAX_ITERATIONS);
             }
-        }
+
+
+            @Override
+            protected void done() {
+                try {
+                    List<Pair<Double, List<Double>>> points = get();
+                    data.clear();
+                    for (Pair<Double, List<Double>> point : points) {
+                        double r = point.getKey();
+                        for (Double value : point.getValue()) {
+                            data.add(r, value);
+                        }
+                    }
+                    plot.dataUpdated(data);
+                } catch (InterruptedException | ExecutionException e) {
+                    e.printStackTrace();
+                }
+            }
+        };
+        worker.execute();
     }
 
     public static void main(String[] args) {
