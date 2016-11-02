@@ -26,9 +26,9 @@ public class MainFrame extends JFrame {
         DataTable data = new DataTable(Double.class, Double.class);
         XYPlot plot = new XYPlot();
 
-        final double eps = 0.001;
-        int maxIterations = 1_000;
-        for (double r = 0.0; r < 5; r += 0.01) {
+        final double eps = 1e-8;
+        int maxIterations = 10_000;
+        for (double r = -2; r < 4; r += 0.01) {
             List<Double> roots = Solver.findRoots(r, eps, maxIterations);
             for (Double root : roots) {
                 data.add(r, root);
@@ -56,7 +56,9 @@ public class MainFrame extends JFrame {
                 double X = numberX.doubleValue();
                 System.out.println(X);
                 List<Double> result = Solver.findConvergeSeries(X, eps, maxIterations);
-                // TODO: show points from result list
+                ConvergeSeriesFrame seriesFrame = new ConvergeSeriesFrame(result);
+                seriesFrame.setTitle("Series");
+                seriesFrame.setVisible(true);
             }
         });
         getContentPane().add(interactivePanel);
