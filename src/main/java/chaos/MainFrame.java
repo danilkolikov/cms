@@ -1,11 +1,15 @@
 package chaos;
 
 import de.erichseifert.gral.data.DataTable;
+import de.erichseifert.gral.navigation.NavigationEvent;
+import de.erichseifert.gral.navigation.NavigationListener;
 import de.erichseifert.gral.plots.XYPlot;
 import de.erichseifert.gral.plots.axes.Axis;
 import de.erichseifert.gral.plots.lines.LineRenderer;
 import de.erichseifert.gral.plots.points.PointRenderer;
 import de.erichseifert.gral.ui.InteractivePanel;
+import de.erichseifert.gral.util.PointND;
+import org.apache.commons.math3.util.Pair;
 
 import javax.swing.*;
 import java.awt.*;
@@ -19,21 +23,22 @@ import java.util.List;
  * @author Danil Kolikov
  */
 public class MainFrame extends JFrame {
+    private static final double EPS = 1e-8;
+    private static final int MAX_ITERATIONS = 10_000;
+    private static final int POINTS_COUNT = 200;
+
+    private final Solver.AsyncSolver solver;
+
     public MainFrame() throws HeadlessException {
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         setMinimumSize(new Dimension(600, 400));
 
+        solver = new Solver.AsyncSolver();
+
         DataTable data = new DataTable(Double.class, Double.class);
         XYPlot plot = new XYPlot();
 
-        final double eps = 1e-8;
-        int maxIterations = 10_000;
-        for (double r = -2; r < 4; r += 0.01) {
-            List<Double> roots = Solver.findRoots(r, eps, maxIterations);
-            for (Double root : roots) {
-                data.add(r, root);
-            }
-        }
+        fillDataTable(data, -2, 4);
         plot.add(data);
 
         // set colors
@@ -55,13 +60,63 @@ public class MainFrame extends JFrame {
                 Number numberX = plot.getAxisRenderer(XYPlot.AXIS_X).viewToWorld(axisX, e.getX(), true);
                 double X = numberX.doubleValue();
                 System.out.println(X);
-                List<Double> result = Solver.findConvergeSeries(X, eps, maxIterations);
+                List<Double> result = Solver.findConvergeSeries(X, EPS, MAX_ITERATIONS);
                 ConvergeSeriesFrame seriesFrame = new ConvergeSeriesFrame(result);
                 seriesFrame.setTitle("Series");
                 seriesFrame.setVisible(true);
             }
         });
+
+        plot.getNavigator().addNavigationListener(new NavigationListener() {
+            @Override
+            public void centerChanged(NavigationEvent<PointND<? extends Number>> navigationEvent) {
+                Axis axisX = plot.getAxis(XYPlot.AXIS_X);
+                double left = axisX.getMin().doubleValue();
+                double right = axisX.getMax().doubleValue();
+                redrawPoints(left, right);
+
+                System.out.println("Moved center: " + navigationEvent.getValueNew());
+            }
+
+            @Override
+            public void zoomChanged(NavigationEvent<Double> navigationEvent) {
+                Axis axisX = plot.getAxis(XYPlot.AXIS_X);
+                double left = axisX.getMin().doubleValue();
+                double right = axisX.getMax().doubleValue();
+                if (navigationEvent.getValueOld() > navigationEvent.getValueNew()) {
+                    double scale = navigationEvent.getValueNew() / navigationEvent.getValueOld();
+                    double middle = (left + right) / 2;
+                    double length = (right - left) / scale;
+                    left = middle - length / 2;
+                    right = middle + length / 2;
+                }
+                redrawPoints(left, right);
+
+                System.out.println("Changed zoom: " + navigationEvent.getValueNew());
+            }
+
+            private void redrawPoints(double left, double right) {
+                System.out.println("View: " + left + " " + right);
+
+                data.clear();
+                fillDataTable(data, left, right);
+            }
+        });
+
         getContentPane().add(interactivePanel);
+    }
+
+    private void fillDataTable(DataTable data, double minX, double maxX) {
+        data.clear();
+        minX = Math.max(-2, minX);
+        maxX = Math.min(4, maxX);
+        List<Pair<Double, List<Double>>> points = solver.solve(minX, maxX, POINTS_COUNT, EPS, MAX_ITERATIONS);
+        for (Pair<Double, List<Double>> point : points) {
+            double r = point.getKey();
+            for (Double value : point.getValue()) {
+                data.add(r, value);
+            }
+        }
     }
 
     public static void main(String[] args) {
