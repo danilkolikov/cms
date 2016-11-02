@@ -109,15 +109,20 @@ public class MainFrame extends JFrame {
 
             @Override
             public void zoomChanged(NavigationEvent<Double> navigationEvent) {
-                for (int i = 0; i < 4; i++) {
-                    plot.remove(pointsData.get(i));
-                    pointsData.get(i).clear();
+                for (DataTable dataTable : pointsData) {
+                    plot.remove(dataTable);
+                    dataTable.clear();
                 }
-                plot.clear();
+
+                plot.remove(pathData);
                 Axis axisX = plot.getAxis(XYPlot.AXIS_X);
                 Axis axisY = plot.getAxis(XYPlot.AXIS_Y);
                 Complex leftBottomPoint = new Complex(axisX.getMin().doubleValue(), axisY.getMin().doubleValue());
                 Complex rightTopPoint = new Complex(axisX.getMax().doubleValue(), axisY.getMax().doubleValue());
+                System.out.print("Points: " + leftBottomPoint.getReal() + " " + leftBottomPoint.getImaginary() + "; " + rightTopPoint.getReal() + " " + rightTopPoint.getImaginary());
+                for (DataTable dataTable : pointsData) {
+                    plot.add(dataTable);
+                }
                 // TODO: calculate new coordinates
                 try {
                     List<Solver.ColoredPoint> newData = solver.solve(leftBottomPoint, rightTopPoint);
@@ -128,9 +133,7 @@ public class MainFrame extends JFrame {
                 } catch (InvalidArgumentException e) {
                     e.printStackTrace();
                 }
-                for (int i = 0; i < 4; i++) {
-                    plot.add(pointsData.get(i));
-                }
+
                 System.out.println("Changed zoom: " + navigationEvent.getValueNew());
             }
         });
