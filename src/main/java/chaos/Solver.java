@@ -1,12 +1,17 @@
 package chaos;
 
+import org.apache.commons.math3.util.Pair;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import static java.lang.Math.abs;
-import static java.util.Collections.emptyList;
 
 /**
  * Solver for chaos task
@@ -57,7 +62,11 @@ public class Solver {
             currentSkip *= 2;
         } while (currentSkip <= maxIterations);
 
-        return emptyList();
+        List<Double> extra = new ArrayList<>(10);
+        for (int i = 0; i < 10; i++) {
+            extra.add(f(r, current));
+        }
+        return extra;
     }
 
     /**
@@ -130,5 +139,47 @@ public class Solver {
             currentSkip *= 2;
         } while (currentSkip <= maxIterations);
         return result;
+    }
+
+    public static class AsyncSolver {
+        private final ExecutorService executorService;
+        private final int threadsCount;
+
+        public AsyncSolver() {
+            threadsCount = Runtime.getRuntime().availableProcessors();
+            executorService = Executors.newFixedThreadPool(threadsCount);
+        }
+
+        public List<Pair<Double, List<Double>>> solve(double left, double right, double pointsCount,
+                                                      double eps, int maxIterations) {
+            List<Pair<Double, List<Double>>> result = new ArrayList<>();
+            List<Future<List<Pair<Double, List<Double>>>>> futures = new ArrayList<>();
+
+            long before = System.currentTimeMillis();
+            double totalStep = (right - left) / threadsCount;
+            for (int i = 0; i < threadsCount; i++) {
+                final double currentLeft = left + totalStep * i;
+                final double currentRight = left + totalStep * (i + 1);
+
+                futures.add(executorService.submit(() -> {
+                    List<Pair<Double, List<Double>>> points = new ArrayList<>();
+                    double step = (currentRight - currentLeft) / (pointsCount / threadsCount);
+                    for (double r = currentLeft; r < currentRight; r += step) {
+                        points.add(new Pair<>(r, findRoots(r, eps, maxIterations)));
+                    }
+                    return points;
+                }));
+            }
+            for (Future<List<Pair<Double, List<Double>>>> future : futures) {
+                try {
+                    result.addAll(future.get());
+                } catch (InterruptedException | ExecutionException e) {
+                    e.printStackTrace();
+                }
+            }
+            long after = System.currentTimeMillis();
+            System.out.println(after - before);
+            return result;
+        }
     }
 }
