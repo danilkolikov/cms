@@ -95,7 +95,6 @@ public class MainFrame extends JFrame {
     private MainFrame() throws HeadlessException {
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         setMinimumSize(new Dimension(700, 700));
-
         for (int i = 0; i < 4; i++) {
             pointsData.add(new DataTable(Double.class, Double.class));
             plot.add(pointsData.get(i));
@@ -117,19 +116,19 @@ public class MainFrame extends JFrame {
                 plot.remove(pathData);
                 Axis axisX = plot.getAxis(XYPlot.AXIS_X);
                 Axis axisY = plot.getAxis(XYPlot.AXIS_Y);
-                Complex leftBottomPoint = new Complex(axisX.getMin().doubleValue(), axisY.getMin().doubleValue());
-                Complex rightTopPoint = new Complex(axisX.getMax().doubleValue(), axisY.getMax().doubleValue());
-                System.out.print("Points: " + leftBottomPoint.getReal() + " " + leftBottomPoint.getImaginary() + "; " + rightTopPoint.getReal() + " " + rightTopPoint.getImaginary());
+                double multiplier = navigationEvent.getValueOld() / navigationEvent.getValueNew();
+                double partX = (axisX.getMax().doubleValue() - axisX.getMin().doubleValue()) / 2;
+                double partY = (axisY.getMax().doubleValue() - axisY.getMin().doubleValue()) / 2;
+                Complex leftBottomPoint = new Complex(axisX.getMin().doubleValue() + partX - partX * multiplier, axisY.getMin().doubleValue() + partY - partY * multiplier);
+                Complex rightTopPoint = new Complex(axisX.getMin().doubleValue() + partX + partX * multiplier, axisY.getMin().doubleValue() + partY + partY * multiplier);
                 for (DataTable dataTable : pointsData) {
                     plot.add(dataTable);
                 }
-                // TODO: calculate new coordinates
                 try {
                     List<Solver.ColoredPoint> newData = solver.solve(leftBottomPoint, rightTopPoint);
                     for (Solver.ColoredPoint point : newData) {
                         drawPoint(point);
                     }
-                    // TODO: points don't have color
                 } catch (InvalidArgumentException e) {
                     e.printStackTrace();
                 }
