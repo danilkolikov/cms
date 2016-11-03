@@ -52,7 +52,7 @@ public class MainFrame extends JFrame {
         for (LineRenderer lR : plot.getLineRenderers(data)) {
             lR.setColor(color);
         }
-
+        plot.getNavigator().setZoomMax(Double.POSITIVE_INFINITY);
         plot.getAxis("x").setAutoscaled(false);
         plot.getAxis("y").setAutoscaled(false);
 
@@ -71,6 +71,7 @@ public class MainFrame extends JFrame {
                 seriesFrame.setVisible(true);
             }
         });
+
 
         plot.getNavigator().addNavigationListener(new NavigationListener() {
             @Override

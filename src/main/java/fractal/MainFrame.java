@@ -13,6 +13,7 @@ import de.erichseifert.gral.ui.InteractivePanel;
 
 import de.erichseifert.gral.util.PointND;
 import org.apache.commons.math3.complex.Complex;
+import org.apache.commons.math3.util.Pair;
 
 import javax.swing.*;
 import java.awt.*;
@@ -21,6 +22,7 @@ import java.awt.event.MouseEvent;
 import java.awt.geom.Ellipse2D;
 import java.util.*;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 /**
  * Main frame for fractal task
@@ -108,12 +110,12 @@ public class MainFrame extends JFrame {
 
             @Override
             public void zoomChanged(NavigationEvent<Double> navigationEvent) {
-                for (DataTable dataTable : pointsData) {
+                /*for (DataTable dataTable : pointsData) {
                     plot.remove(dataTable);
                     dataTable.clear();
                 }
 
-                plot.remove(pathData);
+                plot.remove(pathData);*/
                 Axis axisX = plot.getAxis(XYPlot.AXIS_X);
                 Axis axisY = plot.getAxis(XYPlot.AXIS_Y);
                 double multiplier = navigationEvent.getValueOld() / navigationEvent.getValueNew();
@@ -121,17 +123,44 @@ public class MainFrame extends JFrame {
                 double partY = (axisY.getMax().doubleValue() - axisY.getMin().doubleValue()) / 2;
                 Complex leftBottomPoint = new Complex(axisX.getMin().doubleValue() + partX - partX * multiplier, axisY.getMin().doubleValue() + partY - partY * multiplier);
                 Complex rightTopPoint = new Complex(axisX.getMin().doubleValue() + partX + partX * multiplier, axisY.getMin().doubleValue() + partY + partY * multiplier);
-                for (DataTable dataTable : pointsData) {
+                /*for (DataTable dataTable : pointsData) {
                     plot.add(dataTable);
-                }
-                try {
-                    List<Solver.ColoredPoint> newData = solver.solve(leftBottomPoint, rightTopPoint);
+                }*/
+                //List<Solver.ColoredPoint> newData = solver.solve(leftBottomPoint, rightTopPoint);
+                SwingWorker<List<Solver.ColoredPoint>, Void> worker = new SwingWorker<List<Solver.ColoredPoint>, Void>() {
+                    @Override
+                    protected List<Solver.ColoredPoint> doInBackground() throws Exception {
+                        return solver.solve(leftBottomPoint, rightTopPoint);
+                    }
+
+
+                    @Override
+                    protected void done() {
+                        try {
+                            List<Solver.ColoredPoint> points = get();
+                            for (DataTable table : pointsData) {
+                                table.clear();
+                            }
+                            for (Solver.ColoredPoint coloredPoint : points) {
+                                Complex point = coloredPoint.getPoint();
+                                int color = coloredPoint.getColor();
+                                pointsData.get(color).add(point.getReal(), point.getImaginary());
+                            }
+                            System.out.println("Update tables");
+                            for (DataTable table : pointsData) {
+                                plot.dataUpdated(table);
+                            }
+                        } catch (InterruptedException | ExecutionException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                };
+                worker.execute();
+
+                    /*
                     for (Solver.ColoredPoint point : newData) {
                         drawPoint(point);
-                    }
-                } catch (InvalidArgumentException e) {
-                    e.printStackTrace();
-                }
+                    }*/
 
                 System.out.println("Changed zoom: " + navigationEvent.getValueNew());
             }
