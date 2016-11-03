@@ -1,7 +1,6 @@
 package fractal;
 
 import base.PlotUtils;
-import com.sun.javaws.exceptions.InvalidArgumentException;
 import de.erichseifert.gral.data.DataTable;
 import de.erichseifert.gral.navigation.NavigationEvent;
 import de.erichseifert.gral.navigation.NavigationListener;
@@ -11,17 +10,16 @@ import de.erichseifert.gral.plots.lines.DefaultLineRenderer2D;
 import de.erichseifert.gral.plots.lines.LineRenderer;
 import de.erichseifert.gral.plots.points.PointRenderer;
 import de.erichseifert.gral.ui.InteractivePanel;
-
 import de.erichseifert.gral.util.PointND;
-import org.apache.commons.math3.complex.Complex;
 import org.apache.commons.math3.util.Pair;
+import org.jblas.ComplexDouble;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.geom.Ellipse2D;
-import java.util.*;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
@@ -56,7 +54,7 @@ public class MainFrame extends JFrame {
         }
     }
 
-    private void drawPoints(Complex leftBottomPoint, Complex rightTopPoint) {
+    private void drawPoints(ComplexDouble leftBottomPoint, ComplexDouble rightTopPoint) {
         SwingWorker<List<Solver.ColoredPoint>, Void> worker = new SwingWorker<List<Solver.ColoredPoint>, Void>() {
             @Override
             protected List<Solver.ColoredPoint> doInBackground() throws Exception {
@@ -72,9 +70,9 @@ public class MainFrame extends JFrame {
                         shown[i] = new ArrayList<>();
                     }
                     for (Solver.ColoredPoint coloredPoint : points) {
-                        Complex point = coloredPoint.getPoint();
+                        ComplexDouble point = coloredPoint.getPoint();
                         int color = coloredPoint.getColor();
-                        shown[color].add(new Pair<>(point.getReal(), point.getImaginary()));
+                        shown[color].add(new Pair<>(point.real(), point.imag()));
                     }
                     for (int i = 0; i < 4; i++) {
                         PlotUtils.replaceData(shown[i], pointsData.get(i), plot);
@@ -114,11 +112,11 @@ public class MainFrame extends JFrame {
         }
     }
 
-    private void drawPath(Complex startPoint) {
+    private void drawPath(ComplexDouble startPoint) {
         plot.remove(pathData);
         pathData.clear();
-        for (Complex point : solver.solvePath(startPoint)) {
-            pathData.add(point.getReal(), point.getImaginary());
+        for (ComplexDouble point : solver.solvePath(startPoint)) {
+            pathData.add(point.real(), point.imag());
         }
         plot.add(pathData);
         plot.setLineRenderers(pathData, lineRenderer);
@@ -149,8 +147,8 @@ public class MainFrame extends JFrame {
                 double multiplier = navigationEvent.getValueOld() / navigationEvent.getValueNew();
                 double partX = (axisX.getMax().doubleValue() - axisX.getMin().doubleValue()) / 2;
                 double partY = (axisY.getMax().doubleValue() - axisY.getMin().doubleValue()) / 2;
-                Complex leftBottomPoint = new Complex(axisX.getMin().doubleValue() + partX - partX * multiplier, axisY.getMin().doubleValue() + partY - partY * multiplier);
-                Complex rightTopPoint = new Complex(axisX.getMin().doubleValue() + partX + partX * multiplier, axisY.getMin().doubleValue() + partY + partY * multiplier);
+                ComplexDouble leftBottomPoint = new ComplexDouble(axisX.getMin().doubleValue() + partX - partX * multiplier, axisY.getMin().doubleValue() + partY - partY * multiplier);
+                ComplexDouble rightTopPoint = new ComplexDouble(axisX.getMin().doubleValue() + partX + partX * multiplier, axisY.getMin().doubleValue() + partY + partY * multiplier);
                 drawPoints(leftBottomPoint, rightTopPoint);
                 System.out.println("Changed zoom: " + navigationEvent.getValueNew());
             }
@@ -167,7 +165,7 @@ public class MainFrame extends JFrame {
                 Number numberY = plot.getAxisRenderer(XYPlot.AXIS_Y).viewToWorld(axisY, e.getY(), true);
                 double X = numberX.doubleValue();
                 double Y = -numberY.doubleValue();
-                drawPath(new Complex(X, Y));
+                drawPath(new ComplexDouble(X, Y));
                 getContentPane().repaint();
             }
         });
@@ -180,7 +178,7 @@ public class MainFrame extends JFrame {
         mainFrame.setTitle("Fractals");
 
         double squareSide = 5.0f;
-        mainFrame.drawPoints(new Complex(-squareSide, -squareSide), new Complex(squareSide, squareSide));
+        mainFrame.drawPoints(new ComplexDouble(-squareSide, -squareSide), new ComplexDouble(squareSide, squareSide));
         mainFrame.drawCircle();
 
         mainFrame.setVisible(true);

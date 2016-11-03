@@ -1,7 +1,7 @@
 package base;
 
 import com.sun.istack.internal.Nullable;
-import org.apache.commons.math3.complex.Complex;
+import org.jblas.ComplexDouble;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -11,15 +11,15 @@ import java.util.function.Function;
 /**
  * @author Novik Dmitry ITMO University
  */
-public class NewtonSolver implements Function<Complex, Complex> {
+public class NewtonSolver implements Function<ComplexDouble, ComplexDouble> {
 
-    private final Function<Complex, Complex> f;
-    private final Function<Complex, Complex> df_dz;
+    private final Function<ComplexDouble, ComplexDouble> f;
+    private final Function<ComplexDouble, ComplexDouble> df_dz;
 
     private double accuracy = 1e-4;
     private static final int MAX_ITERATIONS = 1000;
 
-    public NewtonSolver(Function<Complex, Complex> f, Function<Complex, Complex> df_dz) {
+    public NewtonSolver(Function<ComplexDouble, ComplexDouble> f, Function<ComplexDouble, ComplexDouble> df_dz) {
         this.f = f;
         this.df_dz = df_dz;
     }
@@ -36,15 +36,16 @@ public class NewtonSolver implements Function<Complex, Complex> {
      */
     @Override
     @Nullable
-    public Complex apply(Complex complex) {
-        Complex previous = complex;
+    public ComplexDouble apply(ComplexDouble complex) {
+        ComplexDouble previous = complex;
         int iteration = 0;
         while (true) {
             if (iteration == MAX_ITERATIONS) {
                 return null;
             }
-            Complex next = previous.subtract(f.apply(previous).divide(df_dz.apply(previous)));
-            if (next.subtract(previous).abs() < accuracy) {
+            // next = -(f(previous) / f'(previous)) + previous
+            ComplexDouble next = f.apply(previous).divi(df_dz.apply(previous)).negi().addi(previous);
+            if (next.sub(previous).abs() < accuracy) {
                 return next;
             } else {
                 previous = next;
@@ -60,17 +61,18 @@ public class NewtonSolver implements Function<Complex, Complex> {
      * @return list of points
      */
     @Nonnull
-    public List<Complex> getPath(Complex complex) {
-        Complex previous = complex;
+    public List<ComplexDouble> getPath(ComplexDouble complex) {
+        ComplexDouble previous = complex;
         int iteration = 0;
-        ArrayList<Complex> points = new ArrayList<>();
+        ArrayList<ComplexDouble> points = new ArrayList<>();
         while (true) {
             points.add(previous);
             if (iteration == MAX_ITERATIONS) {
                 return points;
             }
-            Complex next = previous.subtract(f.apply(previous).divide(df_dz.apply(previous)));
-            if (next.subtract(previous).abs() < accuracy) {
+            // next = -(f(previous) / f'(previous)) + previous
+            ComplexDouble next = f.apply(previous).divi(df_dz.apply(previous)).negi().addi(previous);
+            if (next.sub(previous).abs() < accuracy) {
                 points.add(next);
                 return points;
             } else {
