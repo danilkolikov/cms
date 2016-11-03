@@ -140,8 +140,11 @@ public class MainFrame extends JFrame {
                 System.out.println("Center changed");
                 Axis axisX = plot.getAxis(XYPlot.AXIS_X);
                 Axis axisY = plot.getAxis(XYPlot.AXIS_Y);
-                Complex leftBottomPoint = new Complex(axisX.getMin().doubleValue(), axisY.getMin().doubleValue());
-                Complex rightTopPoint = new Complex(axisX.getMax().doubleValue(), axisY.getMax().doubleValue());
+                double rangeX = axisX.getMax().doubleValue() - axisX.getMin().doubleValue();
+                double rangeY = axisY.getMax().doubleValue() - axisY.getMin().doubleValue();
+                ComplexDouble centerPoint = new ComplexDouble(navigationEvent.getValueNew().getPoint2D().getX(), navigationEvent.getValueNew().getPoint2D().getY());
+                ComplexDouble leftBottomPoint = new ComplexDouble(centerPoint.real() - rangeX / 2, centerPoint.imag() - rangeY / 2);
+                ComplexDouble rightTopPoint = new ComplexDouble(centerPoint.real() + rangeX / 2, centerPoint.imag() + rangeY / 2);
                 drawPoints(leftBottomPoint, rightTopPoint);
             }
 
