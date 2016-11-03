@@ -137,7 +137,12 @@ public class MainFrame extends JFrame {
         plot.getNavigator().addNavigationListener(new NavigationListener() {
             @Override
             public void centerChanged(NavigationEvent<PointND<? extends Number>> navigationEvent) {
-
+                System.out.println("Center changed");
+                Axis axisX = plot.getAxis(XYPlot.AXIS_X);
+                Axis axisY = plot.getAxis(XYPlot.AXIS_Y);
+                Complex leftBottomPoint = new Complex(axisX.getMin().doubleValue(), axisY.getMin().doubleValue());
+                Complex rightTopPoint = new Complex(axisX.getMax().doubleValue(), axisY.getMax().doubleValue());
+                drawPoints(leftBottomPoint, rightTopPoint);
             }
 
             @Override
