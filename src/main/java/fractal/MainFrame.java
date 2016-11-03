@@ -82,16 +82,11 @@ public class MainFrame extends JFrame {
     }
 
     private void drawPath(Complex startPoint) {
-        // clean previous path
         plot.remove(pathData);
         pathData.clear();
-
-        // count new data
         for (Complex point : solver.solvePath(startPoint)) {
             pathData.add(point.getReal(), point.getImaginary());
         }
-
-        // add new path to plot
         plot.add(pathData);
         plot.setLineRenderers(pathData, lineRenderer);
     }
@@ -115,12 +110,6 @@ public class MainFrame extends JFrame {
 
             @Override
             public void zoomChanged(NavigationEvent<Double> navigationEvent) {
-                /*for (DataTable dataTable : pointsData) {
-                    plot.remove(dataTable);
-                    dataTable.clear();
-                }
-
-                plot.remove(pathData);*/
                 Axis axisX = plot.getAxis(XYPlot.AXIS_X);
                 Axis axisY = plot.getAxis(XYPlot.AXIS_Y);
                 double multiplier = navigationEvent.getValueOld() / navigationEvent.getValueNew();
@@ -128,10 +117,6 @@ public class MainFrame extends JFrame {
                 double partY = (axisY.getMax().doubleValue() - axisY.getMin().doubleValue()) / 2;
                 Complex leftBottomPoint = new Complex(axisX.getMin().doubleValue() + partX - partX * multiplier, axisY.getMin().doubleValue() + partY - partY * multiplier);
                 Complex rightTopPoint = new Complex(axisX.getMin().doubleValue() + partX + partX * multiplier, axisY.getMin().doubleValue() + partY + partY * multiplier);
-                /*for (DataTable dataTable : pointsData) {
-                    plot.add(dataTable);
-                }*/
-                //List<Solver.ColoredPoint> newData = solver.solve(leftBottomPoint, rightTopPoint);
                 SwingWorker<List<Solver.ColoredPoint>, Void> worker = new SwingWorker<List<Solver.ColoredPoint>, Void>() {
                     @Override
                     protected List<Solver.ColoredPoint> doInBackground() throws Exception {
@@ -164,12 +149,6 @@ public class MainFrame extends JFrame {
                     }
                 };
                 worker.execute();
-
-                    /*
-                    for (Solver.ColoredPoint point : newData) {
-                        drawPoint(point);
-                    }*/
-
                 System.out.println("Changed zoom: " + navigationEvent.getValueNew());
             }
         });
