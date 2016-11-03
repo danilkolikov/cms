@@ -33,17 +33,22 @@ public class Solver {
             new Complex(Math.cos(2 * Math.PI / 3), Math.sin(2 * Math.PI / 3)),
             new Complex(Math.cos(4 * Math.PI / 3), Math.sin(4 * Math.PI / 3))};
 
-    private static final int pointsPerAxis = 100;
+    private static final int pointsPerAxis = 150;
 
     private ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
     private NewtonSolver newtonSolver = new NewtonSolver(f, df_dz);
 
     private int findClosestRoot(Complex point) {
-        TreeMap<Double, Integer> map = new TreeMap<>();
-        for (int i = 0; i < roots.length; ++i) {
-            map.put(roots[i].subtract(point).abs(), i);
+        double min = roots[0].subtract(point).abs();
+        int pos = 0;
+        for (int i = 0; i < 3; i++) {
+            double dist = roots[i].subtract(point).abs();
+            if (dist < min) {
+                min = dist;
+                pos = i;
+            }
         }
-        return map.firstEntry().getValue();
+        return pos;
     }
 
     /**
