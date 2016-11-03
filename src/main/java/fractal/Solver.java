@@ -2,14 +2,15 @@ package fractal;
 
 import base.NewtonSolver;
 import com.sun.javaws.exceptions.InvalidArgumentException;
-import org.apache.commons.math3.complex.Complex;
+import org.jblas.ComplexDouble;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.TreeMap;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.function.Function;
 
 /**
@@ -22,27 +23,27 @@ public class Solver {
     /**
      * Function, which roots we want to find.
      */
-    private static Function<Complex, Complex> f = (z) -> z.pow(3).subtract(Complex.ONE);
+    private static Function<ComplexDouble, ComplexDouble> f = z -> z.mul(z).muli(z).subi(ComplexDouble.UNIT);
     /**
      * Derivative of {@code f}.
      */
-    private static Function<Complex, Complex> df_dz = (z) -> z.pow(2).multiply(3);
+    private static Function<ComplexDouble, ComplexDouble> df_dz = z -> z.mul(z).muli(3);
 
-    private static final Complex[] roots = {
-            new Complex(1, 0),
-            new Complex(Math.cos(2 * Math.PI / 3), Math.sin(2 * Math.PI / 3)),
-            new Complex(Math.cos(4 * Math.PI / 3), Math.sin(4 * Math.PI / 3))};
+    private static final ComplexDouble[] roots = {
+            new ComplexDouble(1, 0),
+            new ComplexDouble(Math.cos(2 * Math.PI / 3), Math.sin(2 * Math.PI / 3)),
+            new ComplexDouble(Math.cos(4 * Math.PI / 3), Math.sin(4 * Math.PI / 3))};
 
-    private static final int pointsPerAxis = 150;
+    private static final int pointsPerAxis = 200;
 
     private ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
     private NewtonSolver newtonSolver = new NewtonSolver(f, df_dz);
 
-    private int findClosestRoot(Complex point) {
-        double min = roots[0].subtract(point).abs();
+    private int findClosestRoot(ComplexDouble point) {
+        double min = roots[0].sub(point).abs();
         int pos = 0;
-        for (int i = 0; i < 3; i++) {
-            double dist = roots[i].subtract(point).abs();
+        for (int i = 1; i < 3; i++) {
+            double dist = roots[i].sub(point).abs();
             if (dist < min) {
                 min = dist;
                 pos = i;
@@ -59,28 +60,28 @@ public class Solver {
      * @param b the most right and up point of the rectangle
      * @return list of colored points
      */
-    public List<ColoredPoint> solve(Complex a, Complex b) throws InvalidArgumentException {
-        if (a.getReal() > b.getReal() || (a.getReal() == b.getReal() && a.getImaginary() > b.getImaginary())) {
+    public List<ColoredPoint> solve(ComplexDouble a, ComplexDouble b) throws InvalidArgumentException {
+        if (a.real() > b.real() || (a.real() == b.real() && a.imag() > b.imag())) {
             throw new InvalidArgumentException(new String[]{"Input points are not in lexicographical order"});
         }
 
-        double stepX = Math.abs(a.getReal() - b.getReal()) / pointsPerAxis;
-        double stepY = Math.abs(a.getImaginary() - b.getImaginary()) / pointsPerAxis;
+        double stepX = Math.abs(a.real() - b.real()) / pointsPerAxis;
+        double stepY = Math.abs(a.imag() - b.imag()) / pointsPerAxis;
         newtonSolver.setAccuracy(Math.min(stepX, stepY) / 2);
         ArrayList<ColoredPoint> points = new ArrayList<>();
         ArrayList<Future> futures = new ArrayList<>();
-        for (double x = a.getReal(); x <= b.getReal(); x += stepX) {
+        for (double x = a.real(); x <= b.real(); x += stepX) {
             double finalX = x;
             futures.add(executor.submit(() -> {
-                ArrayList<ColoredPoint> result = new ArrayList<ColoredPoint>();
-                for (double y = a.getImaginary(); y <= b.getImaginary(); y += stepY) {
-                    final Complex point = new Complex(finalX, y);
-                    Complex temp = newtonSolver.apply(point);
-                        if (temp != null) {
-                            result.add(new ColoredPoint(point, findClosestRoot(temp)));
-                        } else {
-                            result.add(new ColoredPoint(point, 3));
-                        }
+                ArrayList<ColoredPoint> result = new ArrayList<>();
+                for (double y = a.imag(); y <= b.imag(); y += stepY) {
+                    final ComplexDouble point = new ComplexDouble(finalX, y);
+                    ComplexDouble temp = newtonSolver.apply(point);
+                    if (temp != null) {
+                        result.add(new ColoredPoint(point, findClosestRoot(temp)));
+                    } else {
+                        result.add(new ColoredPoint(point, 3));
+                    }
 
                 }
                 synchronized (points) {
@@ -106,20 +107,20 @@ public class Solver {
      * @return list of points in the path
      */
     @Nonnull
-    public List<Complex> solvePath(Complex p) {
+    public List<ComplexDouble> solvePath(ComplexDouble p) {
         return newtonSolver.getPath(p);
     }
 
     class ColoredPoint {
-        private final Complex point;
+        private final ComplexDouble point;
         private final int color;
 
-        ColoredPoint(Complex point, int color) {
+        ColoredPoint(ComplexDouble point, int color) {
             this.point = point;
             this.color = color;
         }
 
-        public Complex getPoint() {
+        public ComplexDouble getPoint() {
             return point;
         }
 
