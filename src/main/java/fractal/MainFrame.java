@@ -1,5 +1,6 @@
 package fractal;
 
+import base.PlotUtils;
 import com.sun.javaws.exceptions.InvalidArgumentException;
 import de.erichseifert.gral.data.DataTable;
 import de.erichseifert.gral.navigation.NavigationEvent;
@@ -35,6 +36,7 @@ public class MainFrame extends JFrame {
     private List<DataTable> pointsData = new ArrayList<>(4);
     private DataTable pathData = new DataTable(Double.class, Double.class);
     private XYPlot plot = new XYPlot();
+    private InteractivePanel interactivePanel;
     private LineRenderer lineRenderer = new DefaultLineRenderer2D();
 
     private Solver solver = new Solver();
@@ -102,6 +104,9 @@ public class MainFrame extends JFrame {
             plot.add(pointsData.get(i));
         }
 
+        plot.getNavigator().setZoomMax(Double.POSITIVE_INFINITY);
+        plot.getNavigator().setZoomMin(Double.NEGATIVE_INFINITY);
+
         plot.getNavigator().addNavigationListener(new NavigationListener() {
             @Override
             public void centerChanged(NavigationEvent<PointND<? extends Number>> navigationEvent) {
@@ -138,17 +143,20 @@ public class MainFrame extends JFrame {
                     protected void done() {
                         try {
                             List<Solver.ColoredPoint> points = get();
-                            for (DataTable table : pointsData) {
-                                table.clear();
+                            List<Pair<Double, Double>>[] shown = new List[4];
+                            for (int i = 0; i < 4; i++) {
+                                shown[i] = new ArrayList<>();
                             }
                             for (Solver.ColoredPoint coloredPoint : points) {
                                 Complex point = coloredPoint.getPoint();
                                 int color = coloredPoint.getColor();
-                                pointsData.get(color).add(point.getReal(), point.getImaginary());
+                                shown[color].add(new Pair<>(point.getReal(), point.getImaginary()));
                             }
-                            System.out.println("Update tables");
-                            for (DataTable table : pointsData) {
-                                plot.dataUpdated(table);
+                            for (int i = 0; i < 4; i++) {
+                                PlotUtils.replaceData(shown[i], pointsData.get(i), plot);
+                            }
+                            if (interactivePanel != null) {
+                                interactivePanel.repaint();
                             }
                         } catch (InterruptedException | ExecutionException e) {
                             e.printStackTrace();
@@ -166,7 +174,7 @@ public class MainFrame extends JFrame {
             }
         });
 
-        InteractivePanel interactivePanel = new InteractivePanel(plot);
+        interactivePanel = new InteractivePanel(plot);
         interactivePanel.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -195,6 +203,8 @@ public class MainFrame extends JFrame {
             for (Solver.ColoredPoint point : answer) {
                 mainFrame.drawPoint(point);
             }
+            mainFrame.plot.getAxis(XYPlot.AXIS_X).setAutoscaled(false);
+            mainFrame.plot.getAxis(XYPlot.AXIS_Y).setAutoscaled(false);
         } catch (InvalidArgumentException e) {
             System.out.println("Очень жаль " + e.getRealMessage());
         }
