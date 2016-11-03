@@ -56,28 +56,61 @@ public class MainFrame extends JFrame {
         }
     }
 
-    private void drawPoint(Solver.ColoredPoint coloredPoint) {
-        Complex point = coloredPoint.getPoint();
-        int color = coloredPoint.getColor();
-        pointsData.get(color).add(point.getReal(), point.getImaginary());
-        for (PointRenderer pR : plot.getPointRenderers(pointsData.get(color))) {
-            pR.setShape(circle);
-            switch (color) {
-                case 0:
-                    pR.setColor(Color.RED);
-                    break;
-                case 1:
-                    pR.setColor(Color.GREEN);
-                    break;
-                case 2:
-                    pR.setColor(Color.BLUE);
-                    break;
-                case 3:
-                    //TODO: Black is never printed! May be we should increase number of iterations?
-                    pR.setColor(Color.BLACK);
-                    break;
+    private void drawPoints(Complex leftBottomPoint, Complex rightTopPoint) {
+        SwingWorker<List<Solver.ColoredPoint>, Void> worker = new SwingWorker<List<Solver.ColoredPoint>, Void>() {
+            @Override
+            protected List<Solver.ColoredPoint> doInBackground() throws Exception {
+                return solver.solve(leftBottomPoint, rightTopPoint);
             }
 
+            @Override
+            protected void done() {
+                try {
+                    List<Solver.ColoredPoint> points = get();
+                    List<Pair<Double, Double>>[] shown = new List[4];
+                    for (int i = 0; i < 4; i++) {
+                        shown[i] = new ArrayList<>();
+                    }
+                    for (Solver.ColoredPoint coloredPoint : points) {
+                        Complex point = coloredPoint.getPoint();
+                        int color = coloredPoint.getColor();
+                        shown[color].add(new Pair<>(point.getReal(), point.getImaginary()));
+                    }
+                    for (int i = 0; i < 4; i++) {
+                        PlotUtils.replaceData(shown[i], pointsData.get(i), plot);
+                    }
+                    colorPoints();
+                    if (interactivePanel != null) {
+                        interactivePanel.repaint();
+                    }
+                } catch (InterruptedException | ExecutionException e) {
+                    e.printStackTrace();
+                }
+            }
+        };
+        worker.execute();
+    }
+
+    private void colorPoints() {
+        for (int color = 0; color < 4; color++) {
+            for (PointRenderer pR : plot.getPointRenderers(pointsData.get(color))) {
+                pR.setShape(circle);
+                switch (color) {
+                    case 0:
+                        pR.setColor(Color.RED);
+                        break;
+                    case 1:
+                        pR.setColor(Color.GREEN);
+                        break;
+                    case 2:
+                        pR.setColor(Color.BLUE);
+                        break;
+                    case 3:
+                        //TODO: Black is never printed! May be we should increase number of iterations?
+                        pR.setColor(Color.BLACK);
+                        break;
+                }
+            }
         }
     }
 
@@ -101,7 +134,8 @@ public class MainFrame extends JFrame {
 
         plot.getNavigator().setZoomMax(Double.POSITIVE_INFINITY);
         plot.getNavigator().setZoomMin(Double.NEGATIVE_INFINITY);
-
+        plot.getAxis(XYPlot.AXIS_X).setAutoscaled(false);
+        plot.getAxis(XYPlot.AXIS_Y).setAutoscaled(false);
         plot.getNavigator().addNavigationListener(new NavigationListener() {
             @Override
             public void centerChanged(NavigationEvent<PointND<? extends Number>> navigationEvent) {
@@ -117,38 +151,7 @@ public class MainFrame extends JFrame {
                 double partY = (axisY.getMax().doubleValue() - axisY.getMin().doubleValue()) / 2;
                 Complex leftBottomPoint = new Complex(axisX.getMin().doubleValue() + partX - partX * multiplier, axisY.getMin().doubleValue() + partY - partY * multiplier);
                 Complex rightTopPoint = new Complex(axisX.getMin().doubleValue() + partX + partX * multiplier, axisY.getMin().doubleValue() + partY + partY * multiplier);
-                SwingWorker<List<Solver.ColoredPoint>, Void> worker = new SwingWorker<List<Solver.ColoredPoint>, Void>() {
-                    @Override
-                    protected List<Solver.ColoredPoint> doInBackground() throws Exception {
-                        return solver.solve(leftBottomPoint, rightTopPoint);
-                    }
-
-
-                    @Override
-                    protected void done() {
-                        try {
-                            List<Solver.ColoredPoint> points = get();
-                            List<Pair<Double, Double>>[] shown = new List[4];
-                            for (int i = 0; i < 4; i++) {
-                                shown[i] = new ArrayList<>();
-                            }
-                            for (Solver.ColoredPoint coloredPoint : points) {
-                                Complex point = coloredPoint.getPoint();
-                                int color = coloredPoint.getColor();
-                                shown[color].add(new Pair<>(point.getReal(), point.getImaginary()));
-                            }
-                            for (int i = 0; i < 4; i++) {
-                                PlotUtils.replaceData(shown[i], pointsData.get(i), plot);
-                            }
-                            if (interactivePanel != null) {
-                                interactivePanel.repaint();
-                            }
-                        } catch (InterruptedException | ExecutionException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                };
-                worker.execute();
+                drawPoints(leftBottomPoint, rightTopPoint);
                 System.out.println("Changed zoom: " + navigationEvent.getValueNew());
             }
         });
@@ -167,8 +170,8 @@ public class MainFrame extends JFrame {
                 drawPath(new Complex(X, Y));
                 getContentPane().repaint();
             }
-
         });
+
         getContentPane().add(interactivePanel);
     }
 
@@ -177,18 +180,12 @@ public class MainFrame extends JFrame {
         mainFrame.setTitle("Fractals");
 
         double squareSide = 5.0f;
-        try {
-            List<Solver.ColoredPoint> answer = mainFrame.solver.solve(new Complex(-squareSide, -squareSide), new Complex(squareSide, squareSide));
-            for (Solver.ColoredPoint point : answer) {
-                mainFrame.drawPoint(point);
-            }
-            mainFrame.plot.getAxis(XYPlot.AXIS_X).setAutoscaled(false);
-            mainFrame.plot.getAxis(XYPlot.AXIS_Y).setAutoscaled(false);
-        } catch (InvalidArgumentException e) {
-            System.out.println("Очень жаль " + e.getRealMessage());
-        }
+        mainFrame.drawPoints(new Complex(-squareSide, -squareSide), new Complex(squareSide, squareSide));
         mainFrame.drawCircle();
 
         mainFrame.setVisible(true);
+        // We should set range manually because auto scaling turned off
+        mainFrame.plot.getAxis(XYPlot.AXIS_X).setRange(-squareSide, squareSide);
+        mainFrame.plot.getAxis(XYPlot.AXIS_Y).setRange(-squareSide, squareSide);
     }
 }
