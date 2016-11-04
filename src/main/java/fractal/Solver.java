@@ -1,5 +1,6 @@
 package fractal;
 
+import base.InPlaceFunction;
 import base.NewtonSolver;
 import com.sun.javaws.exceptions.InvalidArgumentException;
 import org.jblas.ComplexDouble;
@@ -11,7 +12,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.function.Function;
 
 /**
  * Solver for fractal task
@@ -23,11 +23,11 @@ public class Solver {
     /**
      * Function, which roots we want to find.
      */
-    private static Function<ComplexDouble, ComplexDouble> f = z -> z.mul(z).muli(z).subi(ComplexDouble.UNIT);
+    private static InPlaceFunction f = (z, res) -> res.copy(z).muli(z).muli(z).subi(ComplexDouble.UNIT);
     /**
      * Derivative of {@code f}.
      */
-    private static Function<ComplexDouble, ComplexDouble> df_dz = z -> z.mul(z).muli(3);
+    private static InPlaceFunction df_dz = (z, res) -> res.copy(z).muli(z).muli(3);
 
     private static final ComplexDouble[] roots = {
             new ComplexDouble(1, 0),
@@ -35,15 +35,16 @@ public class Solver {
             new ComplexDouble(Math.cos(4 * Math.PI / 3), Math.sin(4 * Math.PI / 3))};
 
     private static final int pointsPerAxis = 200;
+    private static final int XS_PER_FUTURE = 20;
 
     private ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
     private NewtonSolver newtonSolver = new NewtonSolver(f, df_dz);
 
-    private int findClosestRoot(ComplexDouble point) {
-        double min = roots[0].sub(point).abs();
+    private int findClosestRoot(ComplexDouble point, ComplexDouble tmp) {
+        double min = tmp.copy(roots[0]).subi(point).abs();
         int pos = 0;
         for (int i = 1; i < 3; i++) {
-            double dist = roots[i].sub(point).abs();
+            double dist = tmp.copy(roots[i]).subi(point).abs();
             if (dist < min) {
                 min = dist;
                 pos = i;
@@ -70,19 +71,25 @@ public class Solver {
         newtonSolver.setAccuracy(Math.min(stepX, stepY) / 2);
         ArrayList<ColoredPoint> points = new ArrayList<>();
         ArrayList<Future> futures = new ArrayList<>();
-        for (double x = a.real(); x <= b.real(); x += stepX) {
-            double finalX = x;
+        for (double x = a.real(); x < b.real(); ) {
+            double startX = x;
+            double endX = Math.min(startX + XS_PER_FUTURE * stepX, b.real());
+            x = endX;
             futures.add(executor.submit(() -> {
                 ArrayList<ColoredPoint> result = new ArrayList<>();
-                for (double y = a.imag(); y <= b.imag(); y += stepY) {
-                    final ComplexDouble point = new ComplexDouble(finalX, y);
-                    ComplexDouble temp = newtonSolver.apply(point);
-                    if (temp != null) {
-                        result.add(new ColoredPoint(point, findClosestRoot(temp)));
-                    } else {
-                        result.add(new ColoredPoint(point, 3));
+                ComplexDouble point = new ComplexDouble(0);
+                ComplexDouble next = new ComplexDouble(0);
+                ComplexDouble tmp = new ComplexDouble(0);
+                for (double finalX = startX; finalX < endX; finalX += stepX) {
+                    for (double y = a.imag(); y <= b.imag(); y += stepY) {
+                        point.set(finalX, y);
+                        ComplexDouble temp = newtonSolver.apply(point, next, tmp);
+                        if (temp != null) {
+                            result.add(new ColoredPoint(finalX, y, findClosestRoot(temp, tmp)));
+                        } else {
+                            result.add(new ColoredPoint(finalX, y, 3));
+                        }
                     }
-
                 }
                 synchronized (points) {
                     points.addAll(result);
@@ -112,20 +119,25 @@ public class Solver {
     }
 
     class ColoredPoint {
-        private final ComplexDouble point;
+        private final double x, y;
         private final int color;
 
-        ColoredPoint(ComplexDouble point, int color) {
-            this.point = point;
+        ColoredPoint(double x, double y, int color) {
+            this.x = x;
+            this.y = y;
             this.color = color;
-        }
-
-        public ComplexDouble getPoint() {
-            return point;
         }
 
         public int getColor() {
             return color;
+        }
+
+        public double getX() {
+            return x;
+        }
+
+        public double getY() {
+            return y;
         }
     }
 }
