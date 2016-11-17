@@ -6,20 +6,19 @@ import org.jblas.ComplexDouble;
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Function;
 
 /**
  * @author Novik Dmitry ITMO University
  */
-public class NewtonSolver implements Function<ComplexDouble, ComplexDouble> {
+public class NewtonSolver {
 
-    private final Function<ComplexDouble, ComplexDouble> f;
-    private final Function<ComplexDouble, ComplexDouble> df_dz;
+    private final InPlaceFunction f;
+    private final InPlaceFunction df_dz;
 
     private double accuracy = 1e-4;
     private static final int MAX_ITERATIONS = 1000;
 
-    public NewtonSolver(Function<ComplexDouble, ComplexDouble> f, Function<ComplexDouble, ComplexDouble> df_dz) {
+    public NewtonSolver(InPlaceFunction f, InPlaceFunction df_dz) {
         this.f = f;
         this.df_dz = df_dz;
     }
@@ -31,24 +30,30 @@ public class NewtonSolver implements Function<ComplexDouble, ComplexDouble> {
     /**
      * Finds root for function {@code f}, using Newton method.
      *
-     * @param complex start point
+     * @param point start point
+     * @param next  Some temporary point
+     * @param temp  Some temporary point
      * @return root point
      */
-    @Override
     @Nullable
-    public ComplexDouble apply(ComplexDouble complex) {
-        ComplexDouble previous = complex;
+    public ComplexDouble apply(ComplexDouble point, ComplexDouble next, ComplexDouble temp) {
         int iteration = 0;
         while (true) {
             if (iteration == MAX_ITERATIONS) {
                 return null;
             }
-            // next = -(f(previous) / f'(previous)) + previous
-            ComplexDouble next = f.apply(previous).divi(df_dz.apply(previous)).negi().addi(previous);
-            if (next.sub(previous).abs() < accuracy) {
+            // next = f(point)
+            f.apply(point, next);
+            // temp = f'(point)
+            df_dz.apply(point, temp);
+            // next = -(f(point) / f'(point)) + previous
+            next = next.divi(temp).negi().addi(point);
+            // temp = (next - point)
+            temp = temp.copy(next).subi(point);
+            if (temp.abs() < accuracy) {
                 return next;
             } else {
-                previous = next;
+                point = point.copy(next);
             }
             ++iteration;
         }
@@ -62,21 +67,27 @@ public class NewtonSolver implements Function<ComplexDouble, ComplexDouble> {
      */
     @Nonnull
     public List<ComplexDouble> getPath(ComplexDouble complex) {
-        ComplexDouble previous = complex;
+        ComplexDouble previous = new ComplexDouble(complex.real(), complex.imag());
+        ComplexDouble next = new ComplexDouble(0);
+        ComplexDouble temp = new ComplexDouble(0);
         int iteration = 0;
         ArrayList<ComplexDouble> points = new ArrayList<>();
         while (true) {
-            points.add(previous);
+            points.add(new ComplexDouble(previous.real(), previous.imag()));
             if (iteration == MAX_ITERATIONS) {
                 return points;
             }
             // next = -(f(previous) / f'(previous)) + previous
-            ComplexDouble next = f.apply(previous).divi(df_dz.apply(previous)).negi().addi(previous);
-            if (next.sub(previous).abs() < accuracy) {
-                points.add(next);
+            f.apply(previous, next);
+            df_dz.apply(previous, temp);
+            next = next.divi(temp).negi().addi(previous);
+            temp = temp.copy(next).subi(previous);
+
+            if (temp.abs() < accuracy) {
+                points.add(new ComplexDouble(next.real(), next.imag()));
                 return points;
             } else {
-                previous = next;
+                previous = previous.copy(next);
             }
             ++iteration;
         }

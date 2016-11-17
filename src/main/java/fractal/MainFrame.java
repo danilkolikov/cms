@@ -70,9 +70,8 @@ public class MainFrame extends JFrame {
                         shown[i] = new ArrayList<>();
                     }
                     for (Solver.ColoredPoint coloredPoint : points) {
-                        ComplexDouble point = coloredPoint.getPoint();
                         int color = coloredPoint.getColor();
-                        shown[color].add(new Pair<>(point.real(), point.imag()));
+                        shown[color].add(new Pair<>(coloredPoint.getX(), coloredPoint.getY()));
                     }
                     for (int i = 0; i < 4; i++) {
                         PlotUtils.replaceData(shown[i], pointsData.get(i), plot);
@@ -81,6 +80,7 @@ public class MainFrame extends JFrame {
                     if (interactivePanel != null) {
                         interactivePanel.repaint();
                     }
+                    System.gc();
                 } catch (InterruptedException | ExecutionException e) {
                     e.printStackTrace();
                 }
