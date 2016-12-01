@@ -169,10 +169,10 @@ public class MainFrame extends JFrame {
                 super.mouseClicked(e);
                 Axis axisX = plot.getAxis(XYPlot.AXIS_X);
                 Axis axisY = plot.getAxis(XYPlot.AXIS_Y);
-                Number numberX = plot.getAxisRenderer(XYPlot.AXIS_X).viewToWorld(axisX, e.getX(), true);
-                Number numberY = plot.getAxisRenderer(XYPlot.AXIS_Y).viewToWorld(axisY, e.getY(), true);
-                double X = numberX.doubleValue();
-                double Y = -numberY.doubleValue();
+                double axisXLen = axisX.getMax().doubleValue() - axisX.getMin().doubleValue();
+                double axisYLen = axisY.getMax().doubleValue() - axisY.getMin().doubleValue();
+                double X = axisX.getMin().doubleValue() + axisXLen * ((double) e.getX() / getContentPane().getWidth());
+                double Y = axisY.getMax().doubleValue() - axisYLen * ((double) e.getY() / getContentPane().getHeight());
                 drawPath(new ComplexDouble(X, Y));
                 getContentPane().repaint();
             }
